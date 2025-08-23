@@ -1,50 +1,338 @@
 <!DOCTYPE html>
-<!--
-    Licensed to the Apache Software Foundation (ASF) under one
-    or more contributor license agreements.  See the NOTICE file
-    distributed with this work for additional information
-    regarding copyright ownership.  The ASF licenses this file
-    to you under the Apache License, Version 2.0 (the
-    "License"); you may not use this file except in compliance
-    with the License.  You may obtain a copy of the License at
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Mélangeur de couleurs — Additif / Soustractif</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    :root { --chip: 25px; }
+    body { background:#0b0c10; color:#e6e6e6; }
+    .app { max-width: 95vw; margin:auto; padding:10px; }
+    .card-surface { background:#11141a; border:none; box-shadow: 0 8px 24px rgba(0,0,0,.45); }
+    .cauldron { height: 220px; border-radius: 10px; border: 2px solid rgba(255,255,255,.12); box-shadow: inset 0 0 0 6px rgba(255,255,255,.06); }
+    .toolbar {max-width: 100vw;  position: sticky; top: 0; z-index: 10; background: rgba(11,12,16,.85); backdrop-filter: blur(6px); border-bottom:1px solid rgba(255,255,255,.08); }
+    .chip { width: var(--chip); height: var(--chip); border-radius: 50%; display:inline-block; vertical-align: middle; border:1px solid white; }
+    .pigment-row { background:#121621; border-left:2px solid rgba(255,255,255,.5); border-radius:0px; padding:.25rem; margin-bottom:.25rem; }
+    .dropdown-menu { max-height: 260px; overflow: auto}
+    .value-badge { font-variant-numeric: tabular-nums; user-select: all; }
+    @media (max-width: 576px){ .cauldron { height: 160px; } }
+  </style>
+</head>
+<body>
+  <header class="toolbar py-2">
+    <div class="app d-flex flex-wrap align-items-center gap-2 justify-content-between">
+      <div class="d-flex align-items-center gap-2">
+        <strong>Mélangeur de couleurs</strong>
+        <span id="modePill" class="badge rounded-pill bg-info text-dark">?</span>
+      <div class="" role="group" aria-label="outils">
+        <button id="resetBtn" class="btn btn-sm btn-outline-danger">Remise à zéro</button>
+        <button id="toggleBtn" class="btn btn-sm btn-outline-info">Change mode</button>
+      </div>
+      </div>
+    </div>
+  </header>
 
-    http://www.apache.org/licenses/LICENSE-2.0
-
-    Unless required by applicable law or agreed to in writing,
-    software distributed under the License is distributed on an
-    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-     KIND, either express or implied.  See the License for the
-    specific language governing permissions and limitations
-    under the License.
--->
-<html>
-    <head>
-        <meta charset="utf-8">
-        <!--
-        Customize this policy to fit your own app's needs. For more guidance, please refer to the docs:
-            https://cordova.apache.org/docs/en/latest/
-        Some notes:
-            * https://ssl.gstatic.com is required only on Android and is needed for TalkBack to function properly
-            * Disables use of inline scripts in order to mitigate risk of XSS vulnerabilities. To change this:
-                * Enable inline JS: add 'unsafe-inline' to default-src
-        -->
-        <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: https://ssl.gstatic.com 'unsafe-eval'; style-src 'self' 'unsafe-inline'; media-src *; img-src 'self' data: content:;">
-        <meta name="format-detection" content="telephone=no">
-        <meta name="msapplication-tap-highlight" content="no">
-        <meta name="viewport" content="initial-scale=1, width=device-width, viewport-fit=cover">
-        <meta name="color-scheme" content="light dark">
-        <link rel="stylesheet" href="css/index.css">
-        <title>Hello World</title>
-    </head>
-    <body>
-        <div class="app">
-            <h1>Apache Cordova</h1>
-            <div id="deviceready" class="blink">
-                <p class="event listening">Connecting to Device</p>
-                <p class="event received">Device is Ready</p>
+  <main class="app my-4">
+    <div class="row g-4">
+      <div class="col-12 col-lg-5">
+        <div class="card card-surface">
+          <div class="card-body d-flex flex-column gap-3">
+            <div id="cauldron" class="cauldron"></div>
+            <div class="d-flex flex-wrap gap-2">
+              <span class="badge bg-secondary text-light value-badge"><span id="hexOut">—</span></span>
+              <span class="badge bg-secondary text-light value-badge">RGB : <span id="rgbOut">—</span></span>
+              <span class="badge bg-secondary text-light value-badge"><span id="nameOut">—</span></span>
             </div>
+          </div>
         </div>
-        <script src="cordova.js"></script>
-        <script src="js/index.js"></script>
-    </body>
+      </div>
+      <div id="couleurs" class="col-12 col-lg-7">
+        <div class="d-flex align-items-center gap-2 justify-content-between">
+        <h6 class="d-flex-grow">Mélange</h6>
+        <button id="addBtn" class="btn btn-sm btn-primary">+</button>
+        </div>
+        <div id="list"></div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // --- Pigments proposés (nom + hex) ---
+    const PIGMENTS = [
+{ name: "Rouge vermillon", hex: "#E34234" },
+{ name: "Rouge vif", hex: "#E30022" },
+{ name: "Rouge carmin", hex: "#960018" },
+{ name: "Rouge Bordeaux", hex: "#800020" },
+{ name: "Velours", hex: "#400010" },
+{ name: "Bleu ciel", hex: "#87CEEB" },            // bleu clair / ciel
+{ name: "Bleu turquoise", hex: "#40E0D0" },
+{ name: "Bleu canard", hex: "#008080" },
+{ name: "Teal foncé", hex: "#005959" },
+{ name: "Bleu azur", hex: "#007FFF" },
+{ name: "Bleu outremer", hex: "#1B3F8B" },
+{ name: "Bleu marine", hex: "#000080" },
+{ name: "Bleu nuit", hex: "#000033" },
+{ name: "Beige", hex: "#D2B48C" },
+{ name: "Jaune primaire", hex: "#FFD500" },
+{ name: "Jaune ocre", hex: "#CC9900" },
+{ name: "Orange vif", hex: "#FFA500" },
+{ name: "Ocre", hex: "#CC7722" },
+{ name: "Marron clair", hex: "#A0522D" },
+{ name: "Chocolat", hex: "#7B3F00" },
+{ name: "Café", hex: "#4B3621" },
+{ name: "Marron foncé", hex: "#5C4033" },
+{ name: "Taupe", hex: "#8B8589" },
+{ name: "Pastel vert", hex: "#77DD77" },
+{ name: "Vert clair", hex: "#66FF66" },
+{ name: "Vert émeraude", hex: "#00AA50" },
+{ name: "Vert sapin", hex: "#014421" },
+{ name: "Vert forêt", hex: "#013220" },
+{ name: "Rose pastel", hex: "#FFD1DC" },
+{ name: "Rose bonbon", hex: "#FF69B4" },
+{ name: "Rose fuchsia", hex: "#FF00FF" },
+{ name: "Cerise", hex: "#DE3163" },
+{ name: "Rose profond", hex: "#990033" },
+{ name: "Violet pastel", hex: "#CDA4DE" },   
+{ name: "Violet", hex: "#8000FF" },
+{ name: "Indigo", hex: "#4B0082" },
+{ name: "Prune", hex: "#301934" },
+{ name: "Blanc", hex: "#FFFFFF" },
+{ name: "Gris clair", hex: "#D3D3D3" },
+{ name: "Gris moyen", hex: "#A9A9A9" },
+{ name: "Gris foncé", hex: "#696969" },
+{ name: "Gris anthracite", hex: "#333333" },
+{ name: "Noir", hex: "#101010" }
+    ];
+
+    // --- Utils ---
+    const clamp = (v,min,max)=>Math.min(max,Math.max(min,v));
+    const hexToRgb = (hex) => {
+      hex = hex.replace('#','');
+      if(hex.length===3) hex = hex.split('').map(c=>c+c).join('');
+      const n = parseInt(hex,16);
+      return { r:(n>>16)&255, g:(n>>8)&255, b:n&255 };
+    };
+    const rgbToHex = (r,g,b)=>'#'+[r,g,b].map(v=>clamp(Math.round(v),0,255).toString(16).padStart(2,'0')).join('').toUpperCase();
+
+    // sRGB <-> lin
+    const srgbToLin1 = x => {
+      x/=255;
+      return x<=0.04045 ? x/12.92 : Math.pow((x+0.055)/1.055,2.4);
+    };
+    const linToSrgb255 = x => {
+      const s = (x<=0.0031308) ? 12.92*x : 1.055*Math.pow(x,1/2.4)-0.055;
+      return clamp(Math.round(s*255),0,255);
+    };
+    function colorDistance(c1, c2){
+  return Math.sqrt(
+    Math.pow(c1.r-c2.r,2) +
+    Math.pow(c1.g-c2.g,2) +
+    Math.pow(c1.b-c2.b,2)
+  );
+    }
+    function closestColorName(rgb, palette){
+  let minDist = Infinity;
+  let nearest = null;
+  palette.forEach(p=>{
+    const pc = hexToRgb(p.hex);
+    const dist = colorDistance(rgb, pc);
+    if(dist < minDist){ minDist = dist; nearest = p.name; }
+  });
+  return nearest;
+}
+    // --- États & DOM ---
+    const cauldron = document.getElementById('cauldron');
+    const hexOut = document.getElementById('hexOut');
+    const rgbOut = document.getElementById('rgbOut');
+    const nameOut = document.getElementById('nameOut');
+    const list = document.getElementById('list');
+    const modePill = document.getElementById('modePill');
+
+    let state = {
+      mode: 'sub', // 'add' | 'sub'
+      pigments: [] // { hex, qty }
+    };
+
+    // --- Mélanges ---
+    function mixAdditive(entries){
+      // somme en linéaire + tone mapping (Reinhard)
+      let R=0,G=0,B=0;
+      const sumQty = entries.reduce((a,e)=>a+e.qty,0) || 1;
+      entries.forEach(e=>{
+        const w = e.qty / sumQty;       // poids relatif
+        const {r,g,b} = hexToRgb(e.hex);
+        R += srgbToLin1(r) * w;
+        G += srgbToLin1(g) * w;
+        B += srgbToLin1(b) * w;
+      });
+      // reinhard pour éviter qu'une petite touche de blanc écrase tout
+      const tone = x => x/(1+x);
+      R = tone(R); G = tone(G); B = tone(B);
+      return { r:linToSrgb255(R), g:linToSrgb255(G), b:linToSrgb255(B) };
+    }
+
+    function mixSubtractive(entries){
+      // moyenne géométrique en lin sRGB, poids normalisés (log-domain)
+      const sumQty = entries.reduce((a,e)=>a+e.qty,0) || 1;
+      let logR=0, logG=0, logB=0;
+      const EPS = 1e-6;
+      entries.forEach(e=>{
+        const w = e.qty / sumQty;
+        const {r,g,b} = hexToRgb(e.hex);
+        const R = srgbToLin1(r);
+        const G = srgbToLin1(g);
+        const B = srgbToLin1(b);
+        logR += w * Math.log(Math.max(R,EPS));
+        logG += w * Math.log(Math.max(G,EPS));
+        logB += w * Math.log(Math.max(B,EPS));
+      });
+      const R = Math.exp(logR), G = Math.exp(logG), B = Math.exp(logB);
+      return { r:linToSrgb255(R), g:linToSrgb255(G), b:linToSrgb255(B) };
+    }
+
+    function mix(entries, mode){
+      if(!entries.length) return mode==='add' ? {r:0,g:0,b:0} : {r:255,g:255,b:255};
+      return mode==='add' ? mixAdditive(entries) : mixSubtractive(entries);
+    }
+
+    // --- UI helpers ---
+    function makeDropdown(p, onPick){
+      // p = pigment courant {name, hex}
+      // onPick({name,hex})
+      const wrap = document.createElement('div');
+      wrap.className = 'dropdown w-100';
+
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-sm btn-outline-light dropdown-toggle d-flex align-items-center gap-2';
+      btn.type = 'button';
+      btn.dataset.bsToggle = 'dropdown';
+      btn.ariaExpanded = 'false';
+      btn.innerHTML = `<span class="chip" style="background:${p.hex}"></span><span>${p.name}</span>`;
+//      btn.innerHTML = `<span class="chip" style="background:${p.hex}"></span>`;
+      const menu = document.createElement('ul');
+      menu.className = 'dropdown-menu dropdown-menu-dark';
+      PIGMENTS.forEach(pg=>{
+        const li = document.createElement('li');
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'dropdown-item d-flex align-items-center gap-2';
+        item.innerHTML = `<span class="chip" style="background:${pg.hex}"></span><span>${pg.name}</span>`;
+        item.addEventListener('click', ()=>{
+          btn.innerHTML = `<span class="chip" style="background:${pg.hex}"></span><span>${pg.name}</span>`;
+     //     btn.innerHTML = `<span class="chip" style="background:${pg.hex}"></span>`;
+          onPick(pg);
+        });
+        li.appendChild(item);
+        menu.appendChild(li);
+      });
+
+      wrap.appendChild(btn);
+      wrap.appendChild(menu);
+      return wrap;
+    }
+
+    function renderList(){
+      list.innerHTML = '';
+      if(state.pigments.length===0){
+        const empty = document.createElement('div');
+        empty.className = 'text-center text-secondary py-4 border border-secondary rounded-4';
+        empty.textContent = 'Aucune couleur. Cliquez sur “Ajouter une couleur”.';
+        list.appendChild(empty);
+        return;
+      }
+
+      state.pigments.forEach((entry, idx)=>{
+        const row = document.createElement('div');
+        row.className = 'pigment-row';
+
+        const top = document.createElement('div');
+        top.className = 'd-flex align-items-center gap-3 flex-wrap';
+
+        // dropdown pigment (rond + nom)
+        const current = PIGMENTS.find(p=>p.hex.toUpperCase()===entry.hex.toUpperCase()) || {name:'Personnalisé', hex:entry.hex};
+        const dd = makeDropdown(current, (pg)=>{
+          entry.hex = pg.hex;
+          chip.style.background = pg.hex;
+          update();
+        });
+
+        // chip d’aperçu
+        const chip = document.createElement('span');
+        chip.className = 'chip';
+        chip.style.background = entry.hex;
+        chip.title = 'Aperçu';
+
+        // slider quantité
+        const sliderWrap = document.createElement('div');
+        sliderWrap.className = 'flex-grow-1';
+        const range = document.createElement('input');
+        range.type = 'range'; range.min = 0; range.max = 100; range.step = 1; range.value = entry.qty;
+        range.className = 'form-range';
+        const meta = document.createElement('div');
+        meta.className = 'd-flex justify-content-between small text-secondary';
+        const qtySpan = document.createElement('span'); qtySpan.textContent = `Quantité : ${entry.qty}`;
+        const hexSpan = document.createElement('span'); hexSpan.textContent = entry.hex.toUpperCase();
+        meta.appendChild(qtySpan); meta.appendChild(hexSpan);
+        range.addEventListener('input', e=>{
+          entry.qty = parseInt(e.target.value,10)||0;
+          qtySpan.textContent = `Quantité : ${entry.qty}`;
+          update();
+        });
+        sliderWrap.appendChild(range);
+        sliderWrap.appendChild(meta);
+
+        // supprimer
+        const del = document.createElement('button');
+        del.className = 'btn btn-sm btn-outline-danger';
+        del.textContent = '✕';
+        del.addEventListener('click', ()=>{
+          state.pigments.splice(idx,1);
+          renderList();
+          update();
+        });
+
+        top.appendChild(dd);
+//        top.appendChild(chip);
+        top.appendChild(sliderWrap);
+        top.appendChild(del);
+        row.appendChild(top);
+        list.appendChild(row);
+      });
+    }
+
+    function update(){
+      const rgb = mix(state.pigments, state.mode);
+      const nearestName = closestColorName(rgb, PIGMENTS);
+ //     console.log("Couleur proche :", nearestName);
+      const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
+      cauldron.style.background = hex;
+      nameOut.textContent = nearestName;
+      hexOut.textContent = hex;
+      rgbOut.textContent = `${rgb.r}, ${rgb.g}, ${rgb.b}`;
+      modePill.textContent = state.mode==='add' ? 'Lumière' : 'Peinture';
+      modePill.className = 'badge rounded-pill ' + (state.mode==='add' ? 'bg-info text-dark' : 'bg-warning');
+    }
+
+    // --- Actions toolbar ---
+    document.getElementById('addBtn').addEventListener('click', ()=>{
+      // Ajoute avec le premier pigment de la liste, quantité 50
+      state.pigments.push({ hex: PIGMENTS[0].hex, qty: 50 });
+      renderList(); update();
+    });
+    document.getElementById('resetBtn').addEventListener('click', ()=>{
+      state.pigments = []; renderList(); update();
+    });
+    document.getElementById('toggleBtn').addEventListener('click', ()=>{
+      state.mode = state.mode==='add' ? 'sub' : 'add';
+      update();
+    });
+
+    // --- Init ---
+    // démarrage avec Rouge + Bleu pour tester
+    state.pigments = [{hex:"#E30022", qty:50},{hex:"#1B3F8B", qty:50}];
+    renderList(); update();
+  </script>
+  <script src="js/bootstrap.bundle.min.js"></script>
+</body>
 </html>
