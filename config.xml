@@ -2,7 +2,7 @@
 <widget id="ovh.chourik.colormix" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
     <name>Color Mix</name>
     <description>Color mix app</description>
-    <icon src="www/img/icon.png" />
+    <icon src="www/img/ColorMix.png" />
     <author email="a.helmer@pi2r.net">
         A. Helmer
     </author>
