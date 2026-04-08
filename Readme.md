@@ -13,7 +13,15 @@ Depuis la racine du projet :
 # Sortie: ColorMix.apk
 ```
 
-(Le script exporte ANDROID_HOME et lance `cordova build android`.)
+Équivalent (extrait de `build_app.sh`) :
+
+```bash
+export ANDROID_HOME=/opt/android-sdk/
+cd ColorMix
+cordova build android
+mv platforms/android/app/build/outputs/apk/debug/app-debug.apk ../ColorMix.apk
+```
+
 
 # TODO, améliorations & idées
 * musiques de fond en fonction du thème
