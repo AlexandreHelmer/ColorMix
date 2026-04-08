@@ -4,16 +4,7 @@ Un jeu de mélange de couleurs simple pour les enfants.
 
 ## Android (debug APK)
 
-Depuis la racine du projet :
-
-```bash
-# Requiert: cordova + Android SDK
-./build_app.sh ColorMix
-
-# Sortie: ColorMix.apk
-```
-
-Équivalent (extrait de `build_app.sh`) :
+Requiert: Cordova + Android SDK. Depuis la racine du projet :
 
 ```bash
 export ANDROID_HOME=/opt/android-sdk/
